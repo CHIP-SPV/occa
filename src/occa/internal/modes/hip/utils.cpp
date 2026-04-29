@@ -60,26 +60,20 @@ namespace occa {
     }
 
     std::string getDeviceArch(const int deviceId) {
+#if defined(__HIP_PLATFORM_AMD__)
       hipDeviceProp_t hipProps;
-
       OCCA_HIP_ERROR("Getting HIP device properties",
                      hipGetDeviceProperties(&hipProps, deviceId));
-
-      std::string gcnArchName{hipProps.gcnArchName};
-      if (!gcnArchName.empty()) {  // AMD or NVIDIA
-        return gcnArchName;
-      }
-
-#ifdef __HIP_PLATFORM_SPIRV__
+      return std::string{hipProps.gcnArchName};
+#elif defined(__HIP_PLATFORM_NVIDIA__)
+      int archMajorVersion = 0, archMinorVersion = 0;
+      getDeviceArchVersion(deviceId, archMajorVersion, archMinorVersion);
+      return "sm_" + toString(archMajorVersion) + toString(archMinorVersion);
+#elif defined(__HIP_PLATFORM_SPIRV__)
       return "spirv64";
 #else
-      int archMajorVersion=0, archMinorVersion=0;
-      getDeviceArchVersion(deviceId, archMajorVersion, archMinorVersion);
-
-      std::string arch = "sm_";
-      arch += toString(archMajorVersion);
-      arch += toString(archMinorVersion);
-      return arch;
+      OCCA_FORCE_ERROR("Unknown HIP platform");
+      return "";
 #endif
     }
 
