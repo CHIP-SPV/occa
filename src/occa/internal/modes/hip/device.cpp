@@ -1,5 +1,6 @@
 #include <occa/core/base.hpp>
 #include <occa/internal/io/output.hpp>
+#include <occa/internal/io/utils.hpp>
 #include <occa/internal/utils/env.hpp>
 #include <occa/internal/utils/misc.hpp>
 #include <occa/internal/utils/sys.hpp>
@@ -226,7 +227,10 @@ namespace occa {
         } else if (startsWith(archString, "gfx")) {
           archFlag = " --offload-arch=" + archString;
         } else {
+#ifndef __HIP_PLATFORM_SPIRV__
+          // chipStar/SPIRV compiles via SPIR-V; no arch flag needed
           OCCA_FORCE_ERROR("Unknown HIP arch");
+#endif
         }
         kernelProps["hipcc_compiler_flags"] += archFlag;
       }
@@ -313,8 +317,16 @@ namespace occa {
                                                    const occa::json &kernelProps) {
       hipModule_t hipModule = NULL;
 
+#ifdef __HIP_PLATFORM_SPIRV__
+      {
+        std::string binaryContent = io::read(binaryFilename, enums::FILE_TYPE_BINARY);
+        OCCA_HIP_ERROR("Kernel [" + kernelName + "]: Loading Module",
+                       hipModuleLoadData(&hipModule, binaryContent.data()));
+      }
+#else
       OCCA_HIP_ERROR("Kernel [" + kernelName + "]: Loading Module",
                      hipModuleLoad(&hipModule, binaryFilename.c_str()));
+#endif
 
       // Create wrapper kernel and set launcherKernel
       kernel &k = *(new kernel(this,
@@ -364,8 +376,16 @@ namespace occa {
       hipModule_t hipModule = NULL;
       hipFunction_t hipFunction = NULL;
 
+#ifdef __HIP_PLATFORM_SPIRV__
+      {
+        std::string binaryContent = io::read(filename, enums::FILE_TYPE_BINARY);
+        OCCA_HIP_ERROR("Kernel [" + kernelName + "]: Loading Module",
+                       hipModuleLoadData(&hipModule, binaryContent.data()));
+      }
+#else
       OCCA_HIP_ERROR("Kernel [" + kernelName + "]: Loading Module",
                      hipModuleLoad(&hipModule, filename.c_str()));
+#endif
 
       OCCA_HIP_ERROR("Kernel [" + kernelName + "]: Loading Function",
                      hipModuleGetFunction(&hipFunction, hipModule, kernelName.c_str()));

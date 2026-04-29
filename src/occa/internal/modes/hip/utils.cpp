@@ -70,6 +70,9 @@ namespace occa {
         return gcnArchName;
       }
 
+#ifdef __HIP_PLATFORM_SPIRV__
+      return "spirv64";
+#else
       int archMajorVersion=0, archMinorVersion=0;
       getDeviceArchVersion(deviceId, archMajorVersion, archMinorVersion);
 
@@ -77,6 +80,7 @@ namespace occa {
       arch += toString(archMajorVersion);
       arch += toString(archMinorVersion);
       return arch;
+#endif
     }
 
     void enablePeerToPeer(hipCtx_t context) {
